@@ -13,13 +13,13 @@ use whikloj\BagItTools\BagUtils;
 class BagTest extends BagItTestFramework
 {
 
-  /**
-   * @group Bag
-   * @covers ::__construct
-   * @covers ::createNewBag
-   * @covers ::updateBagIt
-   * @throws \whikloj\BagItTools\BagItException
-   */
+    /**
+     * @group Bag
+     * @covers ::create
+     * @covers ::__construct
+     * @covers ::createNewBag
+     * @covers ::updateBagIt
+     */
     public function testConstructNewBag()
     {
         $this->assertFileNotExists($this->tmpdir);
@@ -31,21 +31,20 @@ class BagTest extends BagItTestFramework
         $this->assertTrue($bag->validate());
     }
 
-  /**
-   * @group Bag
-   * @covers ::__construct
-   * @covers ::loadBag
-   * @covers ::loadBagIt
-   * @covers ::loadPayloadManifests
-   * @covers ::loadBagInfo
-   * @covers ::loadTagManifests
-   * @covers ::isExtended
-   * @covers ::validate
-   * @covers \whikloj\BagItTools\AbstractManifest::loadFile
-   * @covers \whikloj\BagItTools\AbstractManifest::cleanUpRelPath
-   * @covers \whikloj\BagItTools\AbstractManifest::addToNormalizedList
-   * @throws \whikloj\BagItTools\BagItException
-   */
+    /**
+     * @group Bag
+     * @covers ::__construct
+     * @covers ::loadBag
+     * @covers ::loadBagIt
+     * @covers ::loadPayloadManifests
+     * @covers ::loadBagInfo
+     * @covers ::loadTagManifests
+     * @covers ::isExtended
+     * @covers ::validate
+     * @covers \whikloj\BagItTools\AbstractManifest::loadFile
+     * @covers \whikloj\BagItTools\AbstractManifest::cleanUpRelPath
+     * @covers \whikloj\BagItTools\AbstractManifest::addToNormalizedList
+     */
     public function testOpenBag()
     {
         $this->tmpdir = $this->prepareBasicTestBag();
@@ -62,13 +61,12 @@ class BagTest extends BagItTestFramework
      * Test the getVersion function.
      * @group Bag
      * @covers ::getVersion
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testGetVersion()
     {
         $bag = Bag::create($this->tmpdir);
         $this->assertArrayEquals(
-            [ 'major' => 1, 'minor' => 0 ],
+            ['major' => 1, 'minor' => 0],
             $bag->getVersion()
         );
         file_put_contents(
@@ -77,7 +75,7 @@ class BagTest extends BagItTestFramework
         );
         $newbag = Bag::load($this->tmpdir);
         $this->assertArrayEquals(
-            [ 'major' => 0, 'minor' => 97 ],
+            ['major' => 0, 'minor' => 97],
             $newbag->getVersion()
         );
     }
@@ -87,7 +85,6 @@ class BagTest extends BagItTestFramework
      * @group Bag
      * @covers ::getDataDirectory
      * @covers ::getBagRoot
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testBagDirs()
     {
@@ -97,29 +94,28 @@ class BagTest extends BagItTestFramework
         $this->assertEquals($data, $bag->getDataDirectory());
     }
 
-  /**
-   * Test adding a file to a bag.
-   * @group Bag
-   * @covers ::addFile
-   * @throws \whikloj\BagItTools\BagItException
-   */
+    /**
+     * Test adding a file to a bag.
+     * @group Bag
+     * @covers ::addFile
+     */
     public function testAddFile()
     {
         $source_file = self::TEST_IMAGE['filename'];
         $bag = Bag::create($this->tmpdir);
         $bag->addFile($source_file, "some/image.txt");
         $this->assertDirectoryExists($bag->getDataDirectory() .
-        DIRECTORY_SEPARATOR . 'some');
+            DIRECTORY_SEPARATOR . 'some');
         $this->assertFileExists($bag->getDataDirectory() .
-        DIRECTORY_SEPARATOR . 'some' . DIRECTORY_SEPARATOR . 'image.txt');
+            DIRECTORY_SEPARATOR . 'some' . DIRECTORY_SEPARATOR . 'image.txt');
     }
 
-  /**
-   * Test adding a file that doesn't exist.
-   * @group Bag
-   * @covers ::addFile
-   * @expectedException \whikloj\BagItTools\BagItException
-   */
+    /**
+     * Test adding a file that doesn't exist.
+     * @group Bag
+     * @covers ::addFile
+     * @expectedException \whikloj\BagItTools\BagItException
+     */
     public function testAddFileNoSource()
     {
         $source_file = "some/fake/image.txt";
@@ -127,12 +123,12 @@ class BagTest extends BagItTestFramework
         $bag->addFile($source_file, "some/image.txt");
     }
 
-  /**
-   * Test adding a file with an invalid destination directory.
-   * @group Bag
-   * @covers ::addFile
-   * @expectedException \whikloj\BagItTools\BagItException
-   */
+    /**
+     * Test adding a file with an invalid destination directory.
+     * @group Bag
+     * @covers ::addFile
+     * @expectedException \whikloj\BagItTools\BagItException
+     */
     public function testAddFileInvalidDestination()
     {
         $source_file = self::TEST_IMAGE['filename'];
@@ -162,7 +158,6 @@ class BagTest extends BagItTestFramework
      * Test removing a file from a bag.
      * @group Bag
      * @covers ::removeFile
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testRemoveFile()
     {
@@ -171,6 +166,31 @@ class BagTest extends BagItTestFramework
         $this->assertFileExists($bag->getDataDirectory() . DIRECTORY_SEPARATOR . 'jekyll_and_hyde.txt');
         $bag->removeFile('jekyll_and_hyde.txt');
         $this->assertFileNotExists($bag->getDataDirectory() . DIRECTORY_SEPARATOR . 'jekyll_and_hyde.txt');
+    }
+
+    /**
+     * @group Bag
+     * @covers ::load
+     */
+    public function testLoadAbsolutePath()
+    {
+        $this->tmpdir = $this->prepareBasicTestBag();
+        $bag = Bag::load($this->tmpdir);
+        $this->assertEquals($this->tmpdir, $bag->getBagRoot());
+    }
+
+    /**
+     * @group Bag
+     * @covers ::load
+     */
+    public function testLoadRelativePath()
+    {
+        $this->tmpdir = $this->prepareBasicTestBag();
+        $parent = dirname($this->tmpdir);
+        $name = basename($this->tmpdir);
+        chdir($parent);
+        $bag = Bag::load($name);
+        $this->assertEquals($this->tmpdir, $bag->getBagRoot());
     }
 
     /**
@@ -222,7 +242,6 @@ class BagTest extends BagItTestFramework
      * @group Bag
      * @covers ::removeFile
      * @covers ::checkForEmptyDir
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testRemoveEmptyDirectories()
     {
@@ -260,7 +279,6 @@ class BagTest extends BagItTestFramework
      * @group Bag
      * @covers ::removeFile
      * @covers ::checkForEmptyDir
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testKeepDirectoryWithHiddenFile()
     {
@@ -287,9 +305,9 @@ class BagTest extends BagItTestFramework
     /**
      * Test that changes made outside the API still are noticed.
      * @group Bag
+     * @covers ::load
      * @covers ::update
      * @covers \whikloj\BagItTools\AbstractManifest::getHashes
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testUpdateOnDisk()
     {
@@ -330,7 +348,6 @@ class BagTest extends BagItTestFramework
      * @covers ::setFileEncoding
      * @covers ::getFileEncoding
      * @covers \whikloj\BagItTools\BagUtils::getValidCharset
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testSetFileEncodingSuccess()
     {
@@ -352,6 +369,11 @@ class BagTest extends BagItTestFramework
         $this->assertEquals('EUC-JP', $bag->getFileEncoding());
         $bag->update();
         $this->assertBagItFileEncoding($bag, 'EUC-JP');
+
+        $bag->setFileEncoding('UTF-8');
+        $this->assertEquals('UTF-8', $bag->getFileEncoding());
+        $bag->update();
+        $this->assertBagItFileEncoding($bag, 'UTF-8');
     }
 
     /**
@@ -382,7 +404,6 @@ class BagTest extends BagItTestFramework
      * @covers ::addAlgorithm
      * @covers ::removeAlgorithm
      * @covers ::getAlgorithms
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testGetHashesNames()
     {
@@ -412,7 +433,6 @@ class BagTest extends BagItTestFramework
      * @covers ::getAlgorithms
      * @covers ::hasAlgorithm
      * @covers ::hasHash
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testGetHashesCommon()
     {
@@ -464,7 +484,6 @@ class BagTest extends BagItTestFramework
      * @group Bag
      * @covers ::algorithmIsSupported
      * @covers ::hashIsSupported
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testIsSupportedHash()
     {
@@ -479,7 +498,6 @@ class BagTest extends BagItTestFramework
      * @covers ::setAlgorithm
      * @covers ::removeAllPayloadManifests
      * @covers ::removePayloadManifest
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testSetAlgorithm()
     {
@@ -489,6 +507,39 @@ class BagTest extends BagItTestFramework
         $this->assertArrayEquals(['sha512', 'sha1', 'sha224'], $bag->getAlgorithms());
         $bag->setAlgorithm('md5');
         $this->assertArrayEquals(['md5'], $bag->getAlgorithms());
+    }
+
+    /**
+     * @group Bag
+     * @covers ::addAlgorithm
+     * @expectedException  \whikloj\BagItTools\BagItException
+     */
+    public function testAddAlgorithmUnsupported()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->addAlgorithm('sha-1024');
+    }
+
+    /**
+     * @group Bag
+     * @covers ::setAlgorithm
+     * @expectedException  \whikloj\BagItTools\BagItException
+     */
+    public function testSetAlgorithmUnsupported()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->addAlgorithm('sha-1024');
+    }
+
+    /**
+     * @group Bag
+     * @covers ::removeAlgorithm
+     * @expectedException  \whikloj\BagItTools\BagItException
+     */
+    public function testRemoveAlgorithmUnsupported()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->removeAlgorithm('sha-1024');
     }
 
     /**
@@ -527,7 +578,6 @@ class BagTest extends BagItTestFramework
      * @covers ::validate
      * @covers \whikloj\BagItTools\AbstractManifest::loadFile
      * @covers \whikloj\BagItTools\AbstractManifest::validate
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testWarningOnMd5()
     {
@@ -562,9 +612,9 @@ class BagTest extends BagItTestFramework
      * @covers ::load
      * @covers ::isCompressed
      * @covers ::uncompressBag
+     * @covers ::getDirectory
      * @covers ::getExtensions
      * @covers ::untarBag
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testUncompressTarGz()
     {
@@ -589,7 +639,6 @@ class BagTest extends BagItTestFramework
      * @covers ::uncompressBag
      * @covers ::getExtensions
      * @covers ::untarBag
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testUncompressTarBzip()
     {
@@ -613,7 +662,6 @@ class BagTest extends BagItTestFramework
      * @covers ::uncompressBag
      * @covers ::getExtensions
      * @covers ::unzipBag
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testUncompressZip()
     {
@@ -638,7 +686,6 @@ class BagTest extends BagItTestFramework
      * @covers ::package
      * @covers ::makePackage
      * @covers ::makeZip
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testZipBag()
     {
@@ -667,7 +714,6 @@ class BagTest extends BagItTestFramework
      * @covers ::package
      * @covers ::makePackage
      * @covers ::makeTar
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testTarBag()
     {
@@ -696,7 +742,6 @@ class BagTest extends BagItTestFramework
      * @covers ::package
      * @covers ::makePackage
      * @covers ::makeTar
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testTarGzBag()
     {
@@ -725,7 +770,6 @@ class BagTest extends BagItTestFramework
      * @covers ::package
      * @covers ::makePackage
      * @covers ::makeTar
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testTarBzipBag()
     {
@@ -751,7 +795,6 @@ class BagTest extends BagItTestFramework
      * @group Bag
      * @covers ::upgrade()
      * @covers ::getVersionString
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testUpdateV07()
     {
@@ -908,5 +951,74 @@ class BagTest extends BagItTestFramework
         fclose($fp);
         $bag = Bag::load($this->tmpdir);
         $this->assertCount(1, $bag->getErrors());
+    }
+
+    /**
+     * @group Bag
+     * @covers ::loadBagInfo
+     * @covers ::mustNotRepeatBagInfoExists
+     */
+    public function testMustNotRepeatTags()
+    {
+        $this->tmpdir = $this->prepareBasicTestBag();
+        copy(
+            self::TEST_RESOURCES . DIRECTORY_SEPARATOR . "bag-infos" . DIRECTORY_SEPARATOR .
+            "must-not-repeated-tags.txt",
+            $this->tmpdir . DIRECTORY_SEPARATOR . "bag-info.txt"
+        );
+        touch($this->tmpdir . DIRECTORY_SEPARATOR . "tagmanifest-sha512.txt");
+        $bag = Bag::load($this->tmpdir);
+        $this->assertFalse($bag->validate());
+    }
+
+    /**
+     * @group Bag
+     * @covers ::update
+     */
+    public function testCreateDataOnUpdate()
+    {
+        $this->tmpdir = $this->prepareBasicTestBag();
+        $bag = Bag::load($this->tmpdir);
+        $this->assertTrue($bag->validate());
+        $this->deleteDirAndContents($bag->getDataDirectory());
+        $this->assertFileNotExists($bag->getDataDirectory());
+        $bag->update();
+        $this->assertFileExists($bag->getDataDirectory());
+    }
+
+    /**
+     * @group Bag
+     * @covers ::package
+     * @expectedException \whikloj\BagItTools\BagItException
+     */
+    public function testPackageUnknownType()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->addFile(self::TEST_IMAGE['filename'], 'image.jpg');
+        $bag->package("/some/path/somewhere/archive.rar");
+    }
+
+    /**
+     * @group Bag
+     * @covers ::makeAbsolute
+     */
+    public function testMakeAbsoluteRelative()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $expected = $this->tmpdir . "/data/directory1/filename.txt";
+        $test = $bag->makeAbsolute('data/directory1/filename.txt');
+        $this->assertEquals($expected, $test);
+    }
+
+    /**
+     * @group Bag
+     * @covers ::makeAbsolute
+     */
+    public function testMakeAbsoluteAbsolute()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $expected = $this->tmpdir . "/data/directory1/filename.txt";
+        $test = $bag->makeAbsolute($expected);
+        $this->assertEquals($expected, $test);
     }
 }

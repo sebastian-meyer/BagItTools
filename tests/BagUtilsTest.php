@@ -37,7 +37,6 @@ class BagUtilsTest extends BagItTestFramework
 
     /**
      * @covers ::findAllByPattern
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testFindAllByPattern()
     {
@@ -93,10 +92,10 @@ class BagUtilsTest extends BagItTestFramework
     public function testGetAllFiles()
     {
         $files = BagUtils::getAllFiles(self::TEST_RESOURCES . DIRECTORY_SEPARATOR . 'bag-infos');
-        $this->assertCount(2, $files);
+        $this->assertCount(3, $files);
 
         $files = BagUtils::getAllFiles(self::TEST_RESOURCES . DIRECTORY_SEPARATOR . 'fetchFiles');
-        $this->assertCount(4, $files);
+        $this->assertCount(5, $files);
 
         $files = BagUtils::getAllFiles(self::TEST_EXTENDED_BAG_DIR);
         $this->assertCount(7, $files);

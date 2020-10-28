@@ -111,13 +111,32 @@ class FetchTest extends BagItTestFramework
     }
 
     /**
+     * @group Fetch
+     * @covers ::__construct
+     * @covers \whikloj\BagItTools\Bag::addFetchFile
+     * @covers ::download
+     * @covers ::validateData
+     * @covers ::downloadAll
+     * @covers ::downloadFiles
+     */
+    public function testCheckUri()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->setExtended(true);
+        $bag->addFetchFile(self::$remote_urls[0], "data/dir1/file1.txt");
+        $bag->update();
+
+        $testbag = Bag::load($this->tmpdir);
+        $this->assertTrue($testbag->validate());
+    }
+
+    /**
      * Test destinations that resolve outside the data directory.
      * @group Fetch
      * @covers ::loadFiles
      * @covers ::downloadAll
      * @covers ::downloadFiles
      * @covers ::validateData
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testDestinationOutsideData()
     {
@@ -135,7 +154,6 @@ class FetchTest extends BagItTestFramework
      * @covers ::downloadFiles
      * @covers ::validateData
      * @covers ::validatePath
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testDestinationOtherEncodedCharacters()
     {
@@ -153,7 +171,6 @@ class FetchTest extends BagItTestFramework
      * @covers ::downloadFiles
      * @covers ::validateData
      * @covers ::internalValidateUrl
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testNotHttpUrl()
     {
@@ -178,8 +195,8 @@ class FetchTest extends BagItTestFramework
      * Test adding a new fetch file and that it does download the file to update the payload manifest.
      * @group Fetch
      * @covers \whikloj\BagItTools\Bag::addFetchFile
+     * @covers ::__construct
      * @covers ::download
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testAddFetchFile()
     {
@@ -202,8 +219,10 @@ class FetchTest extends BagItTestFramework
      *
      * @group Fetch
      * @covers \whikloj\BagItTools\Bag::addFetchFile
+     * @covers ::__construct
      * @covers ::download
-     * @expectedException  \whikloj\BagItTools\BagItException
+     * @covers ::urlExistsInFile
+     * @expectedException \whikloj\BagItTools\BagItException
      */
     public function testAddFetchUrlTwice()
     {
@@ -214,21 +233,6 @@ class FetchTest extends BagItTestFramework
         $bag->addFetchFile(self::$remote_urls[0], $file_one_dest);
         $this->assertFileExists($bag->makeAbsolute($file_one_dest));
         $bag->addFetchFile(self::$remote_urls[0], $file_two_dest);
-    }
-
-    /**
-     * Test adding a new fetch file twice with the same destination.
-     *
-     * @group Fetch
-     * @covers \whikloj\BagItTools\Bag::addFetchFile
-     * @covers ::download
-     * @expectedException  \whikloj\BagItTools\BagItException
-     */
-    public function testAddFetchDestTwice()
-    {
-        $bag = Bag::create($this->tmpdir);
-        $bag->addFetchFile(self::$remote_urls[0], 'data/specialplace.txt');
-        $bag->addFetchFile(self::$remote_urls[1], 'data/specialplace.txt');
     }
 
     /**
@@ -245,6 +249,23 @@ class FetchTest extends BagItTestFramework
         $bag->addFile(self::TEST_IMAGE['filename'], 'pretty.jpg');
         $this->assertFileExists($bag->getDataDirectory() . DIRECTORY_SEPARATOR . 'pretty.jpg');
         $bag->addFetchFile(self::$remote_urls[0], 'pretty.jpg');
+    }
+
+    /**
+     * Test adding a new fetch file twice with the same destination.
+     *
+     * @group Fetch
+     * @covers \whikloj\BagItTools\Bag::addFetchFile
+     * @covers ::download
+     * @covers ::urlExistsInFile
+     * @covers ::destinationExistsInFile
+     * @expectedException \whikloj\BagItTools\BagItException
+     */
+    public function testAddFetchDestTwice()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->addFetchFile(self::$remote_urls[0], 'data/specialplace.txt');
+        $bag->addFetchFile(self::$remote_urls[1], 'data/specialplace.txt');
     }
 
     /**
@@ -273,7 +294,6 @@ class FetchTest extends BagItTestFramework
      * @covers ::download
      * @covers ::removeFile
      * @covers ::getData
-     * @throws  \whikloj\BagItTools\BagItException
      */
     public function testRemoveFetchFile()
     {
@@ -322,9 +342,9 @@ class FetchTest extends BagItTestFramework
      * @covers \whikloj\BagItTools\Bag::clearFetch
      * @covers \whikloj\BagItTools\Bag::listFetchFiles
      * @covers ::download
+     * @covers ::createCurl
      * @covers ::clearData
      * @covers ::getData
-     * @throws  \whikloj\BagItTools\BagItException
      */
     public function testClearFetch()
     {
@@ -364,7 +384,6 @@ class FetchTest extends BagItTestFramework
      * @covers ::saveFileData
      * @covers \whikloj\BagItTools\Bag::finalize
      * @covers \whikloj\BagItTools\Bag::loadFetch
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testMultipleDownloadsSuccess()
     {
@@ -435,7 +454,6 @@ class FetchTest extends BagItTestFramework
      * @group Fetch
      * @covers ::downloadAll
      * @covers ::downloadFiles
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testMultiDownloadPartialFailure()
     {
@@ -572,5 +590,33 @@ class FetchTest extends BagItTestFramework
             'destination' => 'somewhere',
         ];
         $reflection->invokeArgs($fetch, [$bad_data]);
+    }
+
+    /**
+     * @group Fetch
+     * @covers \whikloj\BagItTools\Bag::validate
+     */
+    public function testValidateWithFetch()
+    {
+        $this->tmpdir = $this->prepareBasicTestBag();
+        file_put_contents(
+            $this->tmpdir . DIRECTORY_SEPARATOR . 'fetch.txt',
+            self::$remote_urls[0] . " - data/someFile.txt"
+        );
+        $bag = Bag::load($this->tmpdir);
+        $bag->validate();
+        $this->assertFileExists($bag->makeAbsolute('data/someFile.txt'));
+    }
+
+    /**
+     * @group Fetch
+     * @covers \whikloj\BagItTools\Bag::addFetchFile
+     */
+    public function testAddFetchFileWithSize()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->addFetchFile(self::$remote_urls[0], 'data/destination1', 3);
+        $localfile = $bag->makeAbsolute('data/destination1');
+        $this->assertFileExists($localfile);
     }
 }

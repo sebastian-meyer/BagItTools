@@ -15,8 +15,6 @@ class BagInternalTest extends BagItTestFramework
    * Test makeRelative
    * @group BagInternal
    * @covers \whikloj\BagItTools\Bag::makeRelative
-   * @throws \ReflectionException
-   * @throws \whikloj\BagItTools\BagItException
    */
     public function testMakeRelativePlain()
     {
@@ -56,8 +54,6 @@ class BagInternalTest extends BagItTestFramework
    * Test pathInBagData
    * @group BagInternal
    * @covers \whikloj\BagItTools\Bag::pathInBagData
-   * @throws \ReflectionException
-   * @throws \whikloj\BagItTools\BagItException
    */
     public function testPathInBagData()
     {
@@ -94,8 +90,6 @@ class BagInternalTest extends BagItTestFramework
      * @group BagInternal
      * @covers \whikloj\BagItTools\Bag::wrapBagInfoText
      * @covers \whikloj\BagItTools\Bag::wrapAtLength
-     * @throws \ReflectionException
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testWrapBagInfo()
     {
@@ -132,8 +126,6 @@ class BagInternalTest extends BagItTestFramework
      * Test internal version comparison.
      * @group Internal
      * @covers \whikloj\BagItTools\Bag::compareVersion
-     * @throws \ReflectionException
-     * @throws \whikloj\BagItTools\BagItException
      */
     public function testVersionCompare()
     {
@@ -236,6 +228,160 @@ class BagInternalTest extends BagItTestFramework
         $this->assertFalse($methodCall->invokeArgs(
             $bag,
             ['BOO', 'name', $test_array]
+        ));
+    }
+
+    /**
+     * Test that getDirectory finds a single directory.
+     * @group Internal
+     * @covers \whikloj\BagItTools\Bag::getDirectory
+       */
+    public function testGetDirectorySuccess()
+    {
+        $tmp = $this->getTempName();
+        $bag = Bag::create($tmp);
+        $expected_dir = $this->tmpdir . DIRECTORY_SEPARATOR . "expectedDir";
+        mkdir($expected_dir, 0777, true);
+        $methodCall = $this->getReflectionMethod(
+            '\whikloj\BagItTools\Bag',
+            'getDirectory'
+        );
+        $this->assertEquals($expected_dir, $methodCall->invokeArgs(
+            $bag,
+            [$this->tmpdir]
+        ));
+        $this->deleteDirAndContents($tmp);
+    }
+
+    /**
+     * Test that getDirectory fails with multiple subdirectories.
+     * @group Internal
+     * @covers \whikloj\BagItTools\Bag::getDirectory
+       * @expectedException \whikloj\BagItTools\BagItException
+     */
+    public function testGetDirectoryFails()
+    {
+        $tmp = $this->getTempName();
+        $bag = Bag::create($tmp);
+        $expected_dir1 = $this->tmpdir . DIRECTORY_SEPARATOR . "expectedDir";
+        $expected_dir2 = $this->tmpdir . DIRECTORY_SEPARATOR . "anotherExpectedDir";
+        mkdir($expected_dir1, 0777, true);
+        mkdir($expected_dir2, 0777, true);
+        $methodCall = $this->getReflectionMethod(
+            '\whikloj\BagItTools\Bag',
+            'getDirectory'
+        );
+        $this->assertEquals($expected_dir1, $methodCall->invokeArgs(
+            $bag,
+            [$this->tmpdir]
+        ));
+        $this->deleteDirAndContents($tmp);
+    }
+
+    /**
+     * @group Internal
+     * @covers \whikloj\BagItTools\Bag::clearPayloadManifests
+     */
+    public function testClearPayloadManifests()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->addAlgorithm("sha1");
+        $bag->update();
+        $this->assertFileExists($bag->makeAbsolute('manifest-sha1.txt'));
+        $this->assertFileExists($bag->makeAbsolute('manifest-sha512.txt'));
+        $methodCall = $this->getReflectionMethod(
+            '\whikloj\BagItTools\Bag',
+            'clearPayloadManifests'
+        );
+        $methodCall->invoke($bag);
+        $this->assertFileNotExists($bag->makeAbsolute('manifest-sha1.txt'));
+        $this->assertFileNotExists($bag->makeAbsolute('manifest-sha512.txt'));
+    }
+
+    /**
+     * @group Internal
+     * @covers \whikloj\BagItTools\TagManifest::isTagManifest
+     */
+    public function testIsTagManifest()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $bag->setExtended(true);
+        $bag->update();
+        $tagmanifests = $bag->getTagManifests();
+        $this->assertArrayHasKey('sha512', $tagmanifests);
+        $manifest = $tagmanifests['sha512'];
+        $methodCall = $this->getReflectionMethod(
+            '\whikloj\BagItTools\TagManifest',
+            'isTagManifest'
+        );
+        $fullValidName = $bag->makeAbsolute("tagmanifest-sha256.txt");
+        $this->assertTrue($methodCall->invokeArgs(
+            $manifest,
+            [$fullValidName]
+        ));
+        $fullInvalidName = $bag->makeAbsolute("fetch.txt");
+        $this->assertFalse($methodCall->invokeArgs(
+            $manifest,
+            [$fullInvalidName]
+        ));
+    }
+
+    /**
+     * @group Internal
+     *
+     * @covers \whikloj\BagItTools\Bag::updateBagInfoIndex
+     */
+    public function testUpdateBagInfoIndex()
+    {
+        $expected = [
+            'contact-name' => [
+                'Jared Whiklo',
+            ],
+            'source-organization' => [
+                'The room.'
+            ],
+        ];
+        $bag = Bag::create($this->tmpdir);
+        $property = new \ReflectionProperty($bag, 'bagInfoTagIndex');
+        $property->setAccessible(true);
+
+        $bag->addBagInfoTag('Contact-Name', 'Jared Whiklo');
+        $bag->addBagInfoTag('SOURCE-ORGANIZATION', 'The room.');
+
+        $result = $property->getValue($bag);
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * @group Internal
+     * @covers \whikloj\BagItTools\Bag::convertToHumanReadable
+     */
+    public function testConvertBytes()
+    {
+        $bag = Bag::create($this->tmpdir);
+        $methodCall = $this->getReflectionMethod(
+            '\whikloj\BagItTools\Bag',
+            'convertToHumanReadable'
+        );
+        $this->assertEquals('1.01 KB', $methodCall->invokeArgs(
+            $bag,
+            [1036]
+        ));
+        $this->assertEquals('14.31 MB', $methodCall->invokeArgs(
+            $bag,
+            [15004300]
+        ));
+        $this->assertEquals('100.00 B', $methodCall->invokeArgs(
+            $bag,
+            [100]
+        ));
+        $this->assertEquals('0 B', $methodCall->invokeArgs(
+            $bag,
+            [0]
+        ));
+        $this->assertEquals('13.97 GB', $methodCall->invokeArgs(
+            $bag,
+            [15004300760]
         ));
     }
 }
